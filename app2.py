@@ -7,11 +7,14 @@ from datetime import datetime
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-cap = cv2.VideoCapture(0)
+video_path = 'videoauto2.mp4'
+cap = cv2.VideoCapture(video_path)
 
 if not cap.isOpened():
-    print("Error: No se puede abrir la cámara")
+    print("Error: No se puede abrir el video")
     exit()
+
+patente_detectada = False
 
 while True:
     ret, frame = cap.read()
@@ -34,7 +37,7 @@ while True:
         if len(approx) == 4 and area > 9000:
             print('area=', area)
             aspect_ratio = float(w) / h
-            if (aspect_ratio > 2.4):
+            if aspect_ratio > 2.4:
                 patente = gray[y:y+h, x:x+w]
                 texto = pytesseract.image_to_string(patente, lang='eng', config='--psm 7')
                 texto = re.sub(r'[^A-Za-z0-9]', '', texto)
@@ -51,7 +54,6 @@ while True:
                     json_data = json.dumps(registro, indent=4)
                     print("JSON generado:", json_data)
 
-                    
                     url = "http://127.0.0.1:5001/registropatente"
                     try:
                         response = requests.post(url, json=registro)
@@ -62,18 +64,17 @@ while True:
                     except requests.exceptions.RequestException as e:
                         print(f"Error de conexión: {e}")
 
-                print('patente=', texto)
-                cv2.imshow('patente', patente)
-                cv2.moveWindow('patente', 780, 10)
-                cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0))
-                cv2.putText(frame, texto, (x-20, y-10), 1, 2.2, (0, 255, 0), 3)
+                    patente_detectada = True
+                    break
+
+    if patente_detectada:
+        break
 
     cv2.imshow('Imagen', frame)
     cv2.moveWindow('Imagen', 45, 10)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-
 
 cap.release()
 cv2.destroyAllWindows()
